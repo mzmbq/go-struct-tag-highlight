@@ -1,26 +1,102 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  let decorationType: vscode.TextEditorDecorationType | undefined;
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "go-struct-tag-highlight" is now active!');
+  function getColorSetting(): string {
+    return vscode.workspace
+      .getConfiguration()
+      .get<string>("goStructTagHighlight.color", "#e5c07b");
+  }
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('go-struct-tag-highlight.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from go-struct-tag-highlight!');
-	});
+  function createDecorationType(): vscode.TextEditorDecorationType {
+    return vscode.window.createTextEditorDecorationType({
+      color: getColorSetting(),
+      // backgroundColor: "#282C34",
+    });
+  }
 
-	context.subscriptions.push(disposable);
+  function disposeDecorationType() {
+    if (decorationType) {
+      decorationType.dispose();
+    }
+  }
+
+  function updateDecorationType() {
+    disposeDecorationType();
+    decorationType = createDecorationType();
+  }
+
+  async function updateDecorations(editor: vscode.TextEditor | undefined) {
+    if (!editor || !decorationType) {
+      return;
+    }
+    const document = editor.document;
+    const ranges: vscode.Range[] = [];
+    if (document.languageId === "go") {
+      const text = document.getText();
+      const tagBlockRegex = /`([^`\n\r]+)`/g;
+      let tagBlockMatch;
+      while ((tagBlockMatch = tagBlockRegex.exec(text)) !== null) {
+        // Find the start of the line for this tag block
+        const blockAbsoluteStart = tagBlockMatch.index;
+        const lineStart = text.lastIndexOf("\n", blockAbsoluteStart - 1) + 1;
+        const line = text.slice(lineStart, blockAbsoluteStart);
+        // If // appears before the backtick on this line, skip this block
+        const commentIdx = line.indexOf("//");
+        if (commentIdx !== -1 && commentIdx < blockAbsoluteStart - lineStart) {
+          continue;
+        }
+        const blockStart = blockAbsoluteStart + 1;
+        const blockText = tagBlockMatch[1];
+        const labelRegex = /(\w+):"/g;
+        let labelMatch;
+        while ((labelMatch = labelRegex.exec(blockText)) !== null) {
+          const labelOffset = blockStart + labelMatch.index;
+          const labelStart = labelOffset;
+          const labelEnd = labelOffset + labelMatch[1].length;
+          const startPos = document.positionAt(labelStart);
+          const endPos = document.positionAt(labelEnd);
+          ranges.push(new vscode.Range(startPos, endPos));
+        }
+      }
+    }
+    editor.setDecorations(decorationType, ranges);
+  }
+
+  vscode.workspace.onDidChangeConfiguration(
+    (event) => {
+      if (event.affectsConfiguration("goStructTagHighlight.color")) {
+        updateDecorationType();
+        vscode.window.visibleTextEditors.forEach(updateDecorations);
+      }
+    },
+    null,
+    context.subscriptions,
+  );
+
+  vscode.window.onDidChangeActiveTextEditor(
+    (editor) => {
+      updateDecorations(editor);
+    },
+    null,
+    context.subscriptions,
+  );
+  vscode.workspace.onDidChangeTextDocument(
+    (event) => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor && event.document === editor.document) {
+        updateDecorations(editor);
+      }
+    },
+    null,
+    context.subscriptions,
+  );
+
+  updateDecorationType();
+  if (vscode.window.activeTextEditor) {
+    updateDecorations(vscode.window.activeTextEditor);
+  }
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}

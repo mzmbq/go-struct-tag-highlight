@@ -9,7 +9,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:go"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -17,7 +19,18 @@
         "command": "go-struct-tag-highlight.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Go Struct Tag Highlight",
+      "properties": {
+        "goStructTagHighlight.color": {
+          "type": "string",
+          "default": "#e5c07b",
+          "description": "Color for struct tag label highlight."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
