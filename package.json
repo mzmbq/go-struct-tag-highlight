@@ -1,8 +1,8 @@
 {
   "name": "go-struct-tag-highlight",
-  "displayName": "go-struct-tag-highlight",
+  "displayName": "Highlight Go struct tag keys",
   "description": "",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.118.0"
   },
@@ -53,5 +53,7 @@
   "repository": {
     "type": "github",
     "url": "https://github.com/mzmbq/go-struct-tag-highlight.git"
-  }
+  },
+  "icon": "icon.png",
+  "publisher": "mzmbq"
 }
